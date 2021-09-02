@@ -65,7 +65,7 @@ class CaptioningRNN(object):
         self.params["b_proj"] = np.zeros(hidden_dim)
 
         # Initialize parameters for the RNN
-        dim_mul = {"lstm": 4, "rnn": 1}[cell_type]
+        dim_mul = {"lstm": 4, "rnn": 1}[cell_type]  #相当于在字典{"lstm": 4, "rnn": 1}取键cell_type对应的值
         self.params["Wx"] = np.random.randn(wordvec_dim, dim_mul * hidden_dim)
         self.params["Wx"] /= np.sqrt(wordvec_dim)
         self.params["Wh"] = np.random.randn(hidden_dim, dim_mul * hidden_dim)
@@ -151,8 +151,22 @@ class CaptioningRNN(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        h0,features_cache=affine_forward(features,W_proj,b_proj)
+        captions_in_emb,emb_in_cache=word_embedding_forward(captions_in,W_embed)
+        if self.cell_type == 'rnn':
+          h,rnn_cache=rnn_forward(captions_in_emb,h0,Wx,Wh,b)
+        elif self.cell_type=='lstm':
+          h,lstm_cache=lstm_forward(captions_in_emb,h0,Wx,Wh,b)
+        temporal_out,temporal_cache=temporal_affine_forward(h,W_vocab,b_vocab)
+        loss,dout=temporal_softmax_loss(temporal_out,captions_out,mask)
 
+        dtemp,grads['W_vocab'],grads['b_vocab']=temporal_affine_backward(dout,temporal_cache)
+        if self.cell_type == 'rnn':
+          dh,dh0,grads['Wx'],grads['Wh'],grads['b']=rnn_backward(dtemp,rnn_cache)
+        elif self.cell_type=='lstm':
+          dh,dh0,grads['Wx'],grads['Wh'],grads['b']=lstm_backward(dtemp,lstm_cache)
+        grads['W_embed'] =word_embedding_backward(dh,emb_in_cache)
+        dfeatures,grads['W_proj'],grads['b_proj']=affine_backward(dh0,features_cache)
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -219,7 +233,22 @@ class CaptioningRNN(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        prev_h,_=affine_forward(features,W_proj,b_proj)
+        if self.cell_type=='lstm':
+          prev_c=np.zeros_like(prev_h)
+        x=np.array([self._start for i in range(N)])
+        captions[:,0]=self._start
+        for t in range(1,max_length):
+          x_emb,_=word_embedding_forward(x,W_embed)
+          if self.cell_type=='rnn':
+            next_h,_=rnn_step_forward(x_emb,prev_h,Wx,Wh,b)
+            prev_h=next_h
+          elif self.cell_type=='lstm':
+            next_h,next_c,_=lstm_step_forward(x_emb,prev_h,prev_c,Wx,Wh,b)
+            prev_h,prev_c=next_h,next_c
+          vocab_out,_=affine_forward(next_h,W_vocab,b_vocab)
+          x=vocab_out.argmax(axis=1)
+          captions[:,t]=x
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################

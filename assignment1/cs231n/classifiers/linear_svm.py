@@ -93,9 +93,6 @@ def svm_loss_vectorized(W, X, y, reg):
     # Implement a vectorized version of the structured SVM loss, storing the    #
     # result in loss.                                                           #
     #############################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
     N=X.shape[0]
     scores=X.dot(W)
     margins=scores-scores[range(N),y].reshape(-1,1)+1
@@ -103,8 +100,6 @@ def svm_loss_vectorized(W, X, y, reg):
     margins[range(N), y] = 0
     loss += np.sum(margins)/N
     loss +=0.5*reg*np.sum(W*W)
-
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     #############################################################################
     # TODO:                                                                     #
@@ -115,14 +110,11 @@ def svm_loss_vectorized(W, X, y, reg):
     # to reuse some of the intermediate values that you used to compute the     #
     # loss.                                                                     #
     #############################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    
-    # 从svm_loss_naive可知，既然dW的求法是在一个零矩阵上加上对应的Xi（j<>yi），或者 #减去若干个 Xi（j==yi),那么我们可以复用 margins 并通过计算其与X的积来得到最终结果
-    pass
+    # 从svm_loss_naive可知，既然dW的求法是在一个零矩阵上加上对应的Xi（j<>yi），或者 
+    # 减去若干个 Xi（j==yi),那么我们可以复用 margins 并通过计算其与X的积来得到最终结果
     counts=(margins>0).astype(int )
     counts[range(N),y]=-np.sum(counts,axis=1)
     dW=np.dot(X.T,counts)
     dW=dW/N+reg*W  
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     return loss, dW

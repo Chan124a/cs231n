@@ -34,7 +34,16 @@ def compute_saliency_maps(X, y, model):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    logits=model.forward(X)
+    logits=logits.gather(1,y.view(-1,1)).squeeze() # 得到正确类的分数，scores为[5]的Tensor
+    #反向计算，从输出的分数到输入的图像进行一系列梯度计算
+    logits.backward(torch.FloatTensor([1,1,1,1,1])) # 参数为对应长度的梯度初始化
+    #backward() 必须有参数，因为此时的scores为非标量，为5个元素的向量
+
+    saliency=abs(X.grad.data) # 得到正确分数对应输入图像像素点的梯度，并取绝对值
+    #print(torch.max(saliency,dim=1))
+    saliency,i=torch.max(saliency,dim=1)# 从3个颜色通道中取绝对值最大的那个通道的数值
+    saliency = saliency.squeeze() # 去除1维
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -76,7 +85,22 @@ def make_fooling_image(X, target_y, model):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    for _ in range(100):
+        score = model(X_fooling)
+        # print("---------------")
+        # print("score.shape: ",score.shape)
+        # print("---------------")
+        _, index = score.data.max(dim = 1)
+        if index == target_y: break
+        target_score = score[0, target_y]
+        # print("---------------")
+        # print("target_score.shape: ",target_score.shape)
+        # print("target_score.shape: ",target_score)
+        # print("---------------")
+        target_score.backward()
+        im_grad = X_fooling.grad.data
+        X_fooling.data += learning_rate * (im_grad / im_grad.norm())
+
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
